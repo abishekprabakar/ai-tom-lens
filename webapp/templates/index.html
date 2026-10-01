@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ToM Lens</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>ToM Lens</h1>
+    <p>Where do language models represent who knows what? Belief alignment, cognitive maps and the logit lens, layer by layer.</p>
+  </div>
+  <nav role="tablist">
+    <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+    <button role="tab" data-tab="map">Cognitive map</button>
+    <button role="tab" data-tab="lens">Token lens</button>
+  </nav>
+</header>
+
+<main>
+  <section id="overview" class="tab active">
+    <div id="model-cards" class="cards"></div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Triplet alignment by depth</h2>
+        <div class="controls">
+          <label>Question <select id="align-qtype"></select></label>
+        </div>
+      </div>
+      <p class="note">Share of triplets where a prompt sits closer to a <em>different story with the same belief status</em> than to its own one-sentence-different twin. Above 0.5, belief state beats wording. Bands are 95% bootstrap intervals over story groups.</p>
+      <div id="align-chart" class="chart"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Learned triplet metric vs control</h2>
+        <p class="note">A 16-d linear map trained with triplet loss on training stories, scored on held-out ones. Dashed: the same probe on a control task (random labels per object and slot variant). The gap is selectivity.</p>
+        <div id="metric-chart" class="chart"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Logit lens: when the answer appears</h2>
+          <div class="controls"><select id="lens-key"></select></div>
+        </div>
+        <p class="note">Mean logit(answer) − logit(foil) after projecting each layer's state through the final norm and unembedding. Positive means the right container is winning.</p>
+        <div id="lenscurve-chart" class="chart"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Behaviour: forced-choice accuracy</h2>
+        <div class="controls"><label>Split <select id="beh-split"><option>test</option><option>ood</option><option>train</option></select></label></div>
+      </div>
+      <p class="note">Correct when the model gives the true answer a higher log-probability than the other container. FB rows are the false-belief cases; chance is 50%.</p>
+      <div id="beh-table" class="table-wrap"></div>
+    </div>
+  </section>
+
+  <section id="map" class="tab">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Cognitive map (classical MDS)</h2>
+        <div class="controls">
+          <label>View <select id="map-view"><option value="cloud">Prompts</option><option value="centroids">Condition centroids</option></select></label>
+          <label class="slider">Depth <input id="map-depth" type="range" min="0" max="100" value="100"><span id="map-depth-val"></span></label>
+        </div>
+      </div>
+      <p class="note">Cosine distances between hidden states at the last prompt token, projected to 2-D. Prompts view: held-out stories, questions about the leaver's belief (circles) and the actor's belief about the leaver (triangles). Depth is relative, so models with different layer counts line up.</p>
+      <div class="grid2">
+        <div><select id="map-a" class="model-select"></select><div id="map-chart-a" class="chart square"></div><div id="map-meta-a" class="meta"></div></div>
+        <div><select id="map-b" class="model-select"></select><div id="map-chart-b" class="chart square"></div><div id="map-meta-b" class="meta"></div></div>
+      </div>
+      <div class="legend" id="map-legend"></div>
+    </div>
+  </section>
+
+  <section id="lens" class="tab">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Token-level logits</h2>
+        <div class="controls">
+          <label>Prompt <select id="lens-prompt"></select></label>
+          <label class="slider">Temperature <input id="lens-temp" type="range" min="0.1" max="3" step="0.05" value="1"><span id="lens-temp-val">1.00</span></label>
+        </div>
+      </div>
+      <div id="lens-story" class="story"></div>
+      <div class="grid2">
+        <div><select id="lens-a" class="model-select"></select><div id="lens-a-body"></div></div>
+        <div><select id="lens-b" class="model-select"></select><div id="lens-b-body"></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="tooltip" role="tooltip"></div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

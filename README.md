@@ -174,6 +174,45 @@ prompts (orange) separate out in the GRU's last layer more than in the
 transformers', matching its higher raw alignment. MDS stress is reported on
 every panel, because a 2-D picture of a 128-D space can mislead.
 
+## Results on real LLMs
+
+Three open-weight checkpoints, run with `scripts/run_real_llms.sh` on an
+Apple-silicon Mac: 150 story groups, 2,625 prompts per model (test + OOD),
+hidden states at every layer.
+
+### Behaviour (chance is 50%)
+
+| Model | Layers × d | Test | OOD | Leaver false belief | 2nd-order false belief |
+|---|---|---|---|---|---|
+| DeepSeek-R1-Distill-Qwen-1.5B | 28 × 1536 | 56.4% | 64.0% | 48.6% | 42.9% / 42.9% |
+| Qwen3-0.6B | 28 × 1024 | 62.3% | 64.3% | 34.3% | 32.9% / 28.6% |
+| SmolLM2-360M-Instruct | 32 × 960 | 60.2% | 62.7% | 20.0% | 30.0% / 25.7% |
+
+True-belief and reality questions land at 53–80%; every false-belief
+question is at or below chance. Below chance means the models answer with
+where the object *really* is, the classic failure mode.
+
+### Alignment
+
+| Model | Raw triplet alignment (best layer) | Learned metric (best layer) | Control task | Selectivity |
+|---|---|---|---|---|
+| DeepSeek-R1-Distill-Qwen-1.5B | 0.002 | **0.790** (layer 8) | 0.501 | +0.289 |
+| Qwen3-0.6B | 0.160 | **0.775** (layer 9) | 0.527 | +0.248 |
+| SmolLM2-360M-Instruct | 0.043 | **0.825** (layer 26) | 0.459 | +0.367 |
+
+Raw cosine geometry is dominated by wording: minimal pairs that differ in
+one sentence sit together regardless of belief state, so raw alignment is
+near zero. A learned linear metric, though, recovers belief structure at
+78–83% on held-out stories, 25–37 points above a control task with the same
+capacity. **The belief state is linearly readable from the residual stream
+even where the model's answer gets false-belief questions wrong.** In the
+two Qwen-family models it peaks in early-middle layers; in SmolLM2 it peaks
+near the top.
+
+Caveats: these are small models (0.36B–1.5B), prompts are plain completions
+without a chat template, and DeepSeek-R1-Distill is scored on its direct
+answer rather than after a reasoning trace, which disadvantages it.
+
 ## Running it on real LLMs
 
 On any machine that can reach huggingface.co (an Apple-silicon Mac uses MPS
@@ -195,9 +234,8 @@ The Hugging Face path is covered by tests on tiny randomly initialised
 Llama, Qwen2 and Qwen3 models built locally (no download): hidden-state
 extraction, the logit-lens identity (in these implementations the last entry
 of `hidden_states` is already normalised, so it must skip the final norm,
-and the test checks that), and multi-token answer scoring. **No real
-checkpoint has been run through it yet, so there are no real-LLM numbers in
-this README.** Prompts are fed as plain completions without a chat template,
+and the test checks that), and multi-token answer scoring. The numbers
+in "Results on real LLMs" above come from `scripts/run_real_llms.sh`. Prompts are fed as plain completions without a chat template,
 and reasoning models are scored on their direct next-token answer, not after
 a thinking trace.
 
@@ -255,7 +293,8 @@ Verified on Python 3.11, torch 2.14 (CPU), transformers 5.18, Flask 3.1.
 ## Limitations
 
 * The from-scratch models are tiny and task-trained; they show the method
-  working, not anything about LLMs.
+  working. The real-LLM results cover three models up to 1.5B parameters
+  and 150 story groups; larger models were not run.
 * Stories are templated English with 20 names, 16 objects and 14 containers.
   That gives control, but the language is narrow.
 * Triplet alignment uses the last prompt token only. Belief information
